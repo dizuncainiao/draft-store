@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    const result = [
+        {
+            title: '父节点-1',
+            key: '0-0',
+            selected: false,
+            isExpanded: false,
+            checked: false,
+            children: [
+                {
+                    title: '父节点-1-1',
+                    key: '0-1-1',
+                    selected: false,
+                    isExpanded: false,
+                    checked: false,
+                    children: [
+                        {
+                            title: '父节点-1-1-1',
+                            key: '0-1-1-1',
+                            selected: false,
+                            isExpanded: false,
+                            checked: false,
+                            checkAble: false
+                        }
+                    ]
+                },
+                {
+                    title: '父节点-1-2',
+                    key: '0-1-2',
+                    selected: false,
+                    isExpanded: false,
+                    checked: false,
+                    children: [
+                        {
+                            title: '父节点-1-1-2',
+                            key: '0-1-1-2',
+                            selected: false,
+                            isExpanded: false,
+                            checked: false,
+                            checkAble: false
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            title: 'parent 2',
+            key: '0-1',
+            checked: false
+        }
+    ]
+
+    const arr = [
+        {
+            title: '父节点-1',
+            key: '0-0',
+            children: [
+                {
+                    title: '父节点-1-1',
+                    key: '0-1-1',
+                    children: [
+                        {
+                            title: '父节点-1-1-1',
+                            key: '0-1-1-1',
+                            checkAble: false
+                        }
+                    ]
+                },
+                {
+                    title: '父节点-1-2',
+                    key: '0-1-2',
+                    children: [
+                        {
+                            title: '父节点-1-1-2',
+                            key: '0-1-1-2',
+                            checkAble: false
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            title: 'parent 2',
+            key: '0-1',
+        }
+    ]
+
+    const isArr = Array.isArray
+
+    function handleArrData(target, childKey, cb) {
+        if (isArr(target) && target.length) {
+            for (let item of target) {
+                cb(item)
+                if (item[childKey]) handleArrData(item[childKey], childKey, cb)
+            }
+        }
+    }
+
+    handleArrData(arr, 'children', item => {
+        if (typeof item === 'object') {
+            Object.assign(item, {
+                selected: false,
+                isExpanded: false,
+                checked: false,
+            })
+        }
+    })
+
+    console.log(arr);
+</script>
+</body>
+</html>
