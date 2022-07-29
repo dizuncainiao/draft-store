@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    const isArr = Array.isArray
+
+    const result = [
+        {
+            title: '父节点-1',
+            children: [
+                {
+                    title: '父节点-1-1',
+                    children: [
+                        {
+                            title: '父节点-1-1-1',
+                        }
+                    ]
+                },
+                {
+                    title: '父节点-1-2',
+                    children: [
+                        {
+                            title: '父节点-1-1-2',
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            title: '父节点-2',
+        }
+    ]
+
+    function arrAddCurrentIndex(target, parentCurrentIndex) {
+        if (isArr(target) && target.length) {
+            target.forEach((item, index) => {
+                console.log(parentCurrentIndex, 'line 41', item.title)
+                item.currentIndex = parentCurrentIndex ? `${parentCurrentIndex}-${index}` : `${index}`
+                if (item.children) arrAddCurrentIndex(item.children, item.currentIndex)
+            })
+        }
+    }
+
+    arrAddCurrentIndex(result, null)
+    console.log(result);
+
+</script>
+</body>
+</html>

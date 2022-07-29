@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    const result = [
+        {
+            title: '父节点-1',
+            children: [
+                {
+                    title: '父节点-1-1',
+                    children: [
+                        {
+                            title: '父节点-1-1-1',
+                        }
+                    ]
+                },
+                {
+                    title: '父节点-1-2',
+                    children: [
+                        {
+                            title: '父节点-1-1-2',
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            title: '父节点-2',
+        }
+    ]
+
+    const _index = [0, 0, 0]
+
+    function getItem(arr, childKey, index) {
+        const item = arr[index[0]]
+        if (item[childKey] && item[childKey].length && index.length > 1) {
+            return getItem(item[childKey], childKey, index.splice(1))
+        } else {
+            return item
+        }
+    }
+
+    console.log(getItem(result, 'children', _index))
+</script>
+</body>
+</html>

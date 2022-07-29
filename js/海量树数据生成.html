@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    const result = []
+
+    for (let i = 0; i < 40; i++) {
+        result.push({
+            title: `节点-${i}`,
+            key: `${i}`,
+            children: [{
+                title: `节点-${i}-${0}`,
+                key: '0' + i,
+            },{
+                title: `节点-${i}-${1}`,
+                key: '1' + i,
+            },{
+                title: `节点-${i}-${2}`,
+                key: '2' + i,
+            },{
+                title: `节点-${i}-${3}`,
+                key: '3' + i,
+            },{
+                title: `节点-${i}-${4}`,
+                key: '4' + i,
+            }]
+        })
+    }
+
+    console.log(result);
+</script>
+</body>
+</html>
