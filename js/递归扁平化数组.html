@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    const arr = [
+        {
+            title: '节点-0',
+            key: '0',
+            icon: 'notice',
+            children: [
+                {
+                    title: '节点-0-0',
+                    key: '00',
+                    imgUrl: 'https://avatars.githubusercontent.com/u/40376068?s=64&v=4',
+                    children: [
+                        {
+                            title: '节点-0-0-1',
+                            key: '001',
+                            children: [
+                                {
+                                    title: '节点-0-0-1-1',
+                                    key: '0011',
+                                    children: [
+                                        {
+                                            title: '节点-0-0-1-1-1',
+                                            key: '00111'
+                                        },
+                                        {
+                                            title: '节点-0-0-2-1-1',
+                                            key: '00211'
+                                        }
+                                    ]
+                                },
+                                {
+                                    title: '节点-0-0-2-1',
+                                    key: '0021'
+                                }
+                            ]
+                        },
+                        {
+                            title: '节点-0-0-2',
+                            key: '002'
+                        }
+                    ]
+                },
+                {
+                    title: '节点-0-1',
+                    key: '01',
+                    children: [
+                        {
+                            title: '节点-0-1-1',
+                            key: '011'
+                        },
+                        {
+                            title: '节点-0-1-2',
+                            key: '012'
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            title: '节点-1',
+            key: '1',
+            children: [
+                {
+                    title: '节点-1-0',
+                    key: '10',
+                    checkAble: false
+                }
+            ]
+        },
+        {
+            title: '节点-2',
+            key: '2',
+            children: [
+                {
+                    title: '节点-2-0',
+                    key: '20'
+                },
+                {
+                    title: '节点-2-1',
+                    key: '21'
+                }
+            ]
+        },
+        {
+            title: '节点-3',
+            key: '3'
+        }
+    ]
+    let result2 = []
+
+
+    function flatTree(target, childKey, result) {
+        target.forEach((item) => {
+            result.push({
+                title: item.title,
+                key: item.key
+            })
+            if (item[childKey]?.length) {
+                flatTree(item[childKey], childKey, result)
+            }
+        })
+    }
+
+    flatTree(arr, 'children', result2)
+
+    console.log(result2)
+
+    const selectedKeys = ['00', '0011']
+
+    const selectedItem = result2.filter(item => selectedKeys.includes(item.key) && item)
+
+    console.log(selectedItem, 'line 119 119 119')
+</script>
+</body>
+</html>
