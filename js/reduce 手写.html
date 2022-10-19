@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    Array.prototype._reduce = function (callbackFn, initialValue) {
+        if (!this.length) return undefined;
+        let previousValue
+        for (let i = 0; i < this.length; i++) {
+            if (initialValue) {
+                if (i === 0) {
+                    previousValue = initialValue
+                }
+                previousValue = callbackFn(previousValue, this[i], i, this)
+            } else {
+                if (i === 0) {
+                    previousValue = this[i]
+                } else {
+                    previousValue = callbackFn(previousValue, this[i], i, this)
+                }
+            }
+        }
+        return previousValue
+    };
+
+    let result = [1, 2, 3, 4]._reduce((a, b, i, arr) => {
+        b > 1 && a.push(b)
+        return a
+    }, [])
+
+    let result2 = [1, 2, 3, 4]._reduce((a, b, i, arr) => {
+        return a + b
+    }, 10)
+    console.log(result, 'result');
+    console.log(result2, 'result2');
+</script>
+</body>
+</html>

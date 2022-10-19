@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    const fieldValue = {
+        calledName: '小江',
+        calledNumber: '18156224704',
+        callName: '小赵',
+        callNumber: '18156228888',
+        type: '外呼'
+    }
+
+    const tableConfig = [
+        {
+            key: 'calledName',
+            name: '被叫姓名',
+            colspan: 1
+        },
+        {
+            key: 'calledNumber',
+            name: '被叫号码',
+            colspan: 1
+        },
+        {
+            key: 'callName',
+            name: '主叫姓名',
+            colspan: 3
+        },
+        {
+            key: 'callNumber',
+            name: '主叫号码',
+            colspan: 1
+        },
+        {
+            key: 'type',
+            name: '类型',
+            colspan: 1
+        }
+    ]
+
+
+    const tableData = [
+        [
+            {isTh: true, colspan: 1, text: '被叫姓名'},
+            {isTh: false, colspan: 1, text: '小江'},
+            {isTh: true, colspan: 1, text: '被叫号码'},
+            {isTh: false, colspan: 1, html: '<h1>18156224704</h1>'}
+        ],
+        [
+            {isTh: true, colspan: 1, text: '主叫姓名'},
+            {
+                isTh: false,
+                colspan: 3,
+                text: '小赵'
+            }
+        ],
+        [
+            {isTh: true, colspan: 1, text: '主叫号码'},
+            {isTh: false, colspan: 1, text: '18156228888'},
+            {isTh: true, colspan: 1, text: '类型'},
+            {isTh: false, colspan: 1, text: '外呼', slotName: 'test'}
+        ]
+    ]
+
+    const tableDataListFlat = []
+    const tableDataList = []
+
+    tableConfig.forEach(item => {
+        // th数据
+        const th = {
+            isTh: true,
+            colspan: 1,
+            text: item.name
+        }
+        // td数据
+        const td = {
+            isTh: false,
+            colspan: item.colspan,
+            text: fieldValue[item.key]
+        }
+
+        tableDataListFlat.push(th, td)
+    })
+
+    function recurrence(target, colNum) {
+        let sum = 0
+        let deleteCount = 0
+        const listItem = []
+        for (let i = 0; i < target.length; i++) {
+            if (sum < colNum) {
+                const item = target[i]
+                listItem.push(item)
+                sum += (item.colspan || 1)
+                deleteCount++
+            } else {
+                break
+            }
+        }
+        listItem.length && tableDataList.push(listItem)
+        target.length > 0 && recurrence(target.splice(0, deleteCount) && target, colNum)
+    }
+
+    recurrence(tableDataListFlat, 4)
+
+    console.log(tableDataListFlat);
+    console.log(tableDataList);
+</script>
+</body>
+</html>
