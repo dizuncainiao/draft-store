@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script>
+    const businessCarrierList = [
+        {checked: false, name: 'App', value: ''},
+        {checked: false, name: '小程序', value: ''},
+        {checked: false, name: '网站', value: ''},
+        {checked: false, name: '公众号', value: ''},
+        {checked: false, name: '其他', value: ''}
+    ]
+
+    const str = 'App_12_bd_小程序_23_bd_网站_34_bd_公众号_45_bd_其他_67'
+
+    const arr = str.split('_bd_')
+
+    const arr2 = arr.map(item => {
+        const [name, value] = item.split('_')
+        return {
+            name,
+            value
+        }
+    })
+    console.log(arr2);
+    arr2.forEach(item => {
+        const info = businessCarrierList.find(bItem => bItem.name === item.name)
+        info.checked = true
+        info.value = item.value
+    })
+    console.log(businessCarrierList);
+</script>
+</body>
+</html>

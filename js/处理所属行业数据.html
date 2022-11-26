@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<script type="module">
+    import {treeData} from './data.js'
+
+    function handleData(industryData) {
+        if (industryData.length) {
+            industryData.forEach(item => {
+                item.label = item.value
+                item.value = item.code
+                if (item?.children?.length) {
+                    handleData(item.children)
+                }
+            })
+        }
+    }
+
+    handleData(treeData)
+    console.log(treeData);
+</script>
+</body>
+</html>

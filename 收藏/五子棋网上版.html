@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        canvas {
+            display: block;
+            margin: 50px auto;
+            background: #cdcdcd;
+            box-shadow: -2px -2px 2px #EFEFEF, 5px 5px 5px #B9B9B9;
+        }
+
+        .container {
+            margin: 0 auto;
+            max-width: 1100px;
+            overflow: auto;
+            padding: 0 40px;
+        }
+
+        .flex {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            align-content: center;
+            justify-content: space-around;
+        }
+
+
+        #snackbar-container {
+            position: fixed;
+            top: 5%;
+            right: 5%;
+            width: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .snackbar {
+            padding: 1.5rem 1rem;
+            margin: 0.5rem;
+            width: 300px;
+            border-radius: 10px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+            color: white;
+            animation: fade-in 3s ease;
+        }
+
+
+        .snackbar span {
+            float: right;
+            cursor: pointer;
+        }
+
+        .error {
+            background-color: red;
+        }
+
+        .success {
+            background-color: green;
+        }
+
+        .info {
+            background-color: dodgerblue;
+        }
+
+        .warning {
+            background-color: gold;
+            color: black;
+        }
+
+        .fadeout {
+            animation: fade-out 1s ease 2s forwards;
+        }
+
+        @keyframes fade-in {
+            0% {
+                opacity: 0;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fade-out {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
+        }
+
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <section id="snackbar-container">
+    </section>
+    <div class="flex">
+        <div>
+            <canvas id="chess" width="450px" height="450px"></canvas>
+        </div>
+        <div>
+            <div id="select">
+                <h4>请选择执棋颜色</h4>
+                <button class="btn btn-default" id="white">白棋</button>
+                <button class="btn btn-default" id="black">黑棋</button>
+            </div>
+            <button class="btn btn-default" id="reset">重新开始</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    class ChessBoard extends Array {
+        constructor(...args) {
+            super(...args)
+
+            // 棋盘大小为 15*15 行列
+            this.boardSize = 15
+            // 棋格大小为 30*30 的方格
+            this.gridSize = 30
+            // 棋盘内边距（棋盘必须有内边距，
+            // 不光是美观，同时可以为落子点判断提供左右范围）
+            this.padding = this.gridSize / 2
+            // 棋子半径
+            this.pieceRadius = 13
+
+            // 棋子颜色
+            this.empty = 0
+            this.black = 1
+            this.white = -1
+
+            // 搜索位置边界值
+            this.i_min = 0
+            this.j_min = 0
+            this.i_max = this.boardSize
+            this.j_max = this.boardSize
+
+            // 搜索边界每次扩充大小
+            this.range = 2
+
+            this.chess = document.querySelector('#chess')
+            this.context = this.chess.getContext('2d')
+        }
+
+        // 初始棋盘状态
+        init() {
+            for (let i = 0; i < this.boardSize; i++) {
+                this[i] = new Array(this.boardSize)
+                for (let j = 0; j < this.boardSize; j++) {
+                    this[i][j] = this.empty
+                }
+            }
+        }
+
+        show() {
+            console.table(this)
+        }
+
+        // 绘制棋盘
+        draw() {
+            this.context.strokeStyle = "BFBFBF"
+            for (let i = 0; i < this.boardSize; i++) {
+                // 棋盘竖线
+                this.context.moveTo(  // 起点
+                    this.padding + i * this.gridSize,
+                    this.padding
+                )
+                this.context.lineTo(  // 终点
+                    this.padding + i * this.gridSize,
+                    this.padding + (this.boardSize - 1) * this.gridSize
+                )
+                this.context.stroke()
+
+                // 棋盘横线
+                this.context.moveTo(
+                    this.padding,
+                    this.padding + i * this.gridSize
+                )
+                this.context.lineTo(
+                    this.padding + (this.boardSize - 1) * this.gridSize,
+                    this.padding + i * this.gridSize
+                )
+                this.context.stroke()
+            }
+
+            for (let i = 3; i < this.boardSize; i += 4) {
+                for (let j = 3; j < this.boardSize; j += 4) {
+                    this.context.beginPath()
+                    this.context.arc(
+                        this.padding + i * this.gridSize,  // x
+                        this.padding + j * this.gridSize,  // y
+                        this.gridSize / 6,                 // radius
+                        0,                                 // startAngle
+                        2 * Math.PI                        // endAngle
+                    )
+                    this.context.closePath()
+                    this.context.fill()
+                }
+            }
+        }
+
+        // 重新绘制棋盘
+        reDraw() {
+            this.chess.setAttribute('height', `${this.boardSize * this.gridSize}px`)
+            this.draw()
+        }
+
+        // 在i, j位置落color棋子
+        oneStep(i, j, color) {
+            this.resetBorder(i, j)
+
+            this.context.beginPath()
+            this.context.arc(
+                this.padding + i * this.gridSize,  // x 坐标
+                this.padding + j * this.gridSize,  // y 坐标
+                this.pieceRadius,                  // 半径
+                0,                                 // startAngle
+                2 * Math.PI                        // endAngle
+            )
+            this.context.closePath()
+
+            let gradient = this.context.createRadialGradient(
+                this.padding + i * this.gridSize + 2,  // x1
+                this.padding + j * this.gridSize - 2,  // y1
+                this.pieceRadius,                      // r1
+                this.padding + i * this.gridSize + 2,  // x2
+                this.padding + j * this.gridSize - 2,  // y2
+                0                                      // r2
+            )
+            if (color === this.black) {
+                gradient.addColorStop(0, "#0A0A0A")
+                gradient.addColorStop(1, "#636766")
+                this[i][j] = this.black
+            } else if (color === this.white) {
+                gradient.addColorStop(0, "#D1D1D1")
+                gradient.addColorStop(1, "#F9F9F9")
+                this[i][j] = this.white
+            }
+
+            this.context.fillStyle = gradient
+            this.context.fill()
+        }
+
+        // 根据第一次落子位置x, y初始搜索边界
+        initBorder(x, y) {
+            if (x - this.range >= 0) {
+                this.i_min = x - this.range
+            }
+
+            if (x + this.range <= this.boardSize) {
+                this.i_max = x + this.range
+            }
+
+            if (y - this.range >= 0) {
+                this.j_min = y - this.range
+            }
+
+            if (y + this.range <= this.boardSize) {
+                this.j_max = y + this.range
+            }
+        }
+
+        // 根据非第一次落子位置x, y重置边界
+        resetBorder(x, y) {
+            const [i_min, i_max, j_min, j_max] = this.getBorder()
+
+            if (
+                x - this.range >= 0
+                && i_min > x - this.range
+            ) {
+                this.i_min = x - this.range
+            }
+
+            if (
+                x + this.range <= this.boardSize
+                && i_max < x + this.range
+            ) {
+                this.i_max = x + this.range
+            }
+
+            if (
+                y - this.range >= 0
+                && j_min > y - this.range
+            ) {
+                this.j_min = y - this.range
+            }
+
+            if (
+                y + this.range <= this.boardSize
+                && j_max < y + this.range
+            ) {
+                this.j_max = y + this.range
+            }
+        }
+
+        setBorder(i_min, i_max, j_min, j_max) {
+            this.i_min = i_min
+            this.i_max = i_max
+            this.j_min = j_min
+            this.j_max = j_max
+        }
+
+        getBorder() {
+            return [this.i_min, this.i_max, this.j_min, this.j_max]
+        }
+
+        is(i, j, color) {
+            return this[i] && this[i][j] === color
+        }
+
+        isEmpty(i, j) {
+            return this.is(i, j, this.empty)
+        }
+
+        isBlack(i, j) {
+            return this.is(i, j, this.black)
+        }
+
+        isWhite(i, j) {
+            return this.is(i, j, this.white)
+        }
+
+        // 根据棋盘情况
+        // 返回可以落子的位置
+        possiblePlaces() {
+            let places = []
+            let [i_min, i_max, j_min, j_max] = this.getBorder()
+            for (let i = i_min; i < i_max; i++) {
+                for (let j = j_min; j < j_max; j++) {
+                    if (this.isEmpty(i, j)) {
+                        places.push([i, j])
+                    }
+                }
+            }
+            return places
+        }
+    }
+
+
+    // 不同棋型的价值
+    const VALUE = {
+        LIVE_ONE: 10,
+        LIVE_TWO: 500,
+        LIVE_THREE: 10000,
+        LIVE_FOUR: 1000000,
+        LIVE_FIVE: 100000000,
+        SLEEP_ONE: 5,
+        SLEEP_TWO: 100,
+        SLEEP_THREE: 500,
+        SLEEP_FOUR: 5000,
+        SLEEP_FIVE: 100000000,
+        BLOCKED_ONE: 1,
+        BLOCKED_TWO: 10,
+        BLOCKED_THREE: 200,
+        BLOCKED_FOUR: 500,
+        BLOCKED_FIVE: 100000000,
+    };
+
+    // 保存四个方向每一行的棋子情况
+    let row = [];
+    let col = [];
+    let leftSlash = [];
+    let rightSlash = [];
+
+    // 根据连子数(ctn)和封堵数(blk)
+    // 给出一个评价值
+    function getValue(cnt, blk) {
+        if (blk === 0) { // 活棋
+            switch (cnt) {
+                case 1:
+                    return VALUE.LIVE_ONE;
+                case 2:
+                    return VALUE.LIVE_TWO;
+                case 3:
+                    return VALUE.LIVE_THREE;
+                case 4:
+                    return VALUE.LIVE_FOUR;
+                default:
+                    return VALUE.LIVE_FIVE;
+            }
+        } else if (blk === 1) { // 眠棋
+            switch (cnt) {
+                case 1:
+                    return VALUE.SLEEP_ONE;
+                case 2:
+                    return VALUE.SLEEP_TWO;
+                case 3:
+                    return VALUE.SLEEP_THREE;
+                case 4:
+                    return VALUE.SLEEP_FOUR;
+                default:
+                    return VALUE.SLEEP_FIVE;
+            }
+        } else { // 死棋
+            switch (cnt) {
+                case 1:
+                    return VALUE.BLOCKED_ONE;
+                case 2:
+                    return VALUE.BLOCKED_TWO;
+                case 3:
+                    return VALUE.BLOCKED_THREE;
+                case 4:
+                    return VALUE.BLOCKED_FOUR;
+                default:
+                    return VALUE.BLOCKED_FIVE;
+            }
+        }
+    }
+
+    // 根据一行棋的情况
+    // 给出color棋在这一行的评值
+    function evaluateLine(line, color) {
+        let value = 0;   // 评估值
+        let cnt = 0;     // 连子数
+        let blk = 0;     // 封闭数
+
+        const MY = color;   // 己方
+        const OT = -color;  // 对方
+
+        // 从左向右扫描
+        let lineLength = line.length;
+        for (let i = 0; i < lineLength; i++) {
+            if (line[i] === color) {  // 找到第一个己方的棋子
+                // 还原计数
+                cnt = 1;
+
+                // 检查左侧是否封闭
+                if (i === 0 || line[i - 1] === OT) {
+                    // 如果棋子在棋盘的边界，或者上一个棋子为他方棋子
+                    blk = 1;
+                } else {
+                    blk = 0;
+                }
+
+                // 计算连子数
+                for (i = i + 1; i < lineLength && line[i] == MY; i++) {
+                    cnt++;
+                }
+
+                // 看右侧是否封闭
+                if (line[i] === OT || i === lineLength) {
+                    blk++;
+                }
+
+                // 计算评估值
+                value += getValue(cnt, blk);
+            }
+        }
+
+        return value;
+    }
+
+    // 根据棋盘chessBoard状况
+    // 给出棋子颜色为color在chessBoard的评值
+    function evaluateState(chessBoard, color) {
+        const BOARD_SIZE = chessBoard.boardSize
+
+        // 初始化(重置)行数组
+        for (let i = 0; i < BOARD_SIZE; i++) {
+            row[i] = [];
+            col[i] = [];
+        }
+        for (let i = 0; i < BOARD_SIZE * 2 - 1; i++) {
+            leftSlash[i] = [];
+            rightSlash[i] = [];
+        }
+
+        // 将chessBoard中的棋子分四个方向存储为单行值
+        for (let i = 0; i < BOARD_SIZE; ++i) {
+            for (let j = 0; j < BOARD_SIZE; ++j) {
+                row[j].push(chessBoard[i][j]);
+                col[i].push(chessBoard[i][j]);
+                leftSlash[j - i + 14].push(chessBoard[i][j]);
+                rightSlash[i + j].push(chessBoard[i][j]);
+            }
+        }
+
+        // 评值
+        let colorValue = 0;
+        let notColorValue = 0;
+
+        // 累加行状态评估值
+        for (let i = 0; i < BOARD_SIZE; i++) {
+            colorValue += evaluateLine(row[i], color);
+            notColorValue += evaluateLine(row[i], -color);
+            colorValue += evaluateLine(col[i], color);
+            notColorValue += evaluateLine(col[i], -color);
+        }
+        for (let i = 0; i < BOARD_SIZE * 2 - 1; i++) {
+            colorValue += evaluateLine(leftSlash[i], color);
+            notColorValue += evaluateLine(leftSlash[i], -color);
+            colorValue += evaluateLine(rightSlash[i], color);
+            notColorValue += evaluateLine(rightSlash[i], -color);
+        }
+        return colorValue - 1.1 * notColorValue;
+    }
+
+    // 在 place 落 color 颜色棋子后，该棋子是否在[cx, cy]方向的这一行取得胜利
+    function victoryInLine(chessBoard, place, color, cx, cy) {
+        let cnt = 1;
+
+        let [i, j] = place;
+
+        let [x, y] = [i + cx, j + cy];
+        for (; chessBoard.is(x, y, color); x += cx, y += cy) {
+            cnt++;
+        }
+
+        [x, y] = [i - cx, j - cy];
+        for (; chessBoard.is(x, y, color); x -= cx, y -= cy) {
+            cnt++;
+        }
+
+        // 超过 5 颗棋子取得胜利
+        return cnt >= 5
+    }
+
+    // 判断 chessBoard 中 place 位置的 color 颜色棋子是否取得胜利
+    function isVictory(chessBoard, place, color) {
+        // 依次从四个方向判断是否取得胜利
+        return (
+            victoryInLine(chessBoard, place, color, 1, 0)      // row
+            || victoryInLine(chessBoard, place, color, 0, 1)   // col
+            || victoryInLine(chessBoard, place, color, 1, 1)   // left, x+1,y+1 or x-1,y-1
+            || victoryInLine(chessBoard, place, color, -1, 1)  // right, x+1,y-1 or x-1,y+1
+        )
+    }
+
+    // 博弈树探索深度
+    let LIMIT_DEPTH = 2
+
+    // 1. 记录搜索博弈树落子前旧的边界
+    // 2. 在 place 位置落子，并得到落子后的棋局估值
+    // 3. 恢复落子前的边界值与棋盘状态
+    function getWeight(chessBoard, alpha, beta, color, searchDepth, place, isMax) {
+        // 保存旧边界
+        let [old_i_min, old_i_max, old_j_min, old_j_max] = chessBoard.getBorder();
+
+        // 落子并更新搜索边界
+        let [i, j] = place;
+        if (isMax) {
+            // max 层，color 一方落子，取 color 能得到最大估值的情况
+            chessBoard[i][j] = color;
+        } else {
+            // min 层，color 对方落子，取 color 能得到最小估值的情况
+            chessBoard[i][j] = -color;
+        }
+        chessBoard.resetBorder(i, j);
+
+        let weight = alphabeta(chessBoard, alpha, beta, color, searchDepth + 1);
+
+        // 恢复棋盘上一个状态与边界值
+        chessBoard[i][j] = chessBoard.empty;
+        chessBoard.setBorder(old_i_min, old_i_max, old_j_min, old_j_max);
+
+        return weight;
+    }
+
+    // 从博弈树的 0 层进入，递归搜索可能的棋盘状态
+    // 其他层返回颜色为 color 的棋子在此层的估值( min 值或 max 值)
+    // 递归结束后回到 0 层，返回 color 棋子最优落子位置
+    function alphabeta(chessBoard, alpha, beta, color, searchDepth) {
+        // 此层是取极大值还是极小值
+        let isMin = searchDepth % 2 === 1
+        let isMax = !isMin
+
+        // 此层是否为 top 层（top 层也是 max 层）
+        let isTop = searchDepth === 0
+
+        // 到探索树叶子节点，直接返回 color 一方在这种情况下的估值
+        if (searchDepth >= LIMIT_DEPTH) {
+            // console.log(searchDepth, place)
+            return evaluateState(chessBoard, color);
+        }
+
+        // 否则继续向下探索，估值由下层节点确定
+
+        // top 层，color 一方落子，取 color 能得到最大估值的情况
+        // 并返回 color 取得最大估值时的位置
+        if (isTop) {
+            let max = -Infinity;
+            let maxPlace = null;
+            for (let place of chessBoard.possiblePlaces()) {
+
+                let weight = getWeight(chessBoard, alpha, beta, color, searchDepth, place, isMax);
+
+                // top/max 层取最大值
+                if (max < weight) {
+                    max = weight;
+
+                    alpha = max;
+                    maxPlace = place;
+                }
+
+                // if (alpha < max) {
+                //     alpha = max;
+                //     maxPlace = place;
+                // }
+
+                // top 层不存在上一层，所以这里不用剪枝
+                // beta cut-off: 上一层的beta大于这层的alpha，则不用再继续搜索
+                // if (beta <= alpha) {
+                //     break;
+                // }
+            }
+            return maxPlace;
+        }
+
+        // max 层，color 一方落子，取 color 能得到最大估值的情况
+        if (isMax) {
+            let max = -Infinity;
+            for (let place of chessBoard.possiblePlaces()) {
+
+                let weight = getWeight(chessBoard, alpha, beta, color, searchDepth, place, isMax);
+
+                // max 层取最大值
+                if (max < weight) {
+                    max = weight;
+                }
+                if (alpha < max) {
+                    alpha = max;
+                }
+
+                // beta cut-off: 上一层的 beta 大于这层的 alpha，则不用在继续搜索
+                if (beta <= alpha) {
+                    break;
+                }
+            }
+            return max;
+        } else {
+            // min 层，color 对方落子，取 color 能得到最小估值的情况
+            let min = +Infinity;
+            for (let place of chessBoard.possiblePlaces()) {
+
+                let weight = getWeight(chessBoard, alpha, beta, color, searchDepth, place, isMax);
+
+                // min 层取最小值
+                if (min > weight) {
+                    min = weight;
+                }
+                if (beta > min) {
+                    beta = min;
+                }
+
+                // alpha cut-off: 上一层的 alpha 已经大于这层的 beta，则不用继续搜索
+                if (beta <= alpha) {
+                    break;
+                }
+
+            }
+            return min;
+        }
+    }
+
+    // 根据棋盘情况
+    // 返回 color 棋子下一个应该落子的位置
+    function nextPlace(chessBoard, color) {
+        let alpha = -Infinity;
+        let beta = +Infinity;
+        return alphabeta(chessBoard, alpha, beta, color, 0);
+    }
+
+    // 棋盘
+    let chessBoard = new ChessBoard()
+    chessBoard.init()
+    chessBoard.draw()
+
+    // 棋子颜色
+    const BLACK = chessBoard.black
+    const WHITE = chessBoard.white
+
+
+    // 游戏是否结束
+    let isOver = false
+    // 是否为第一步
+    let isFirstStep = true
+    // 双方棋子颜色
+    let [my, enemy] = [null, null]
+
+
+    let selectDiv = document.getElementById('select')
+    let whiteBtn = document.getElementById('white')
+    let blackBtn = document.getElementById('black')
+
+    let resetBtn = document.getElementById('reset')
+    resetBtn.style.display = 'none'
+
+
+    whiteBtn.onclick = function () {
+        my = WHITE
+        enemy = BLACK
+        selectDiv.style.display = 'none'
+        resetBtn.style.display = 'block'
+        start()
+    }
+
+    blackBtn.onclick = function () {
+        my = BLACK
+        enemy = WHITE
+        selectDiv.style.display = 'none'
+        resetBtn.style.display = 'block'
+        start()
+    }
+
+    function start() {
+        // 如果我方是白棋，让黑棋走第一步
+        if (my === WHITE) {
+            chessBoard.oneStep(7, 7, BLACK)
+            chessBoard.initBorder(7, 7)
+            isFirstStep = false
+        }
+
+        chessBoard.chess.onclick = function (e) {
+            if (isOver) {
+                return
+            }
+
+            // 因为有内边距 padding，所以 x - padding 到 x + padding 范围内
+            // 都会落在 x 上，y 坐标同理
+            let i = Math.floor(e.offsetX / chessBoard.gridSize)
+            let j = Math.floor(e.offsetY / chessBoard.gridSize)
+
+            if (chessBoard.isEmpty(i, j)) {
+                if (isFirstStep) {
+                    chessBoard.initBorder(i, j)
+                    isFirstStep = false
+                }
+
+                chessBoard.oneStep(i, j, my)
+
+                if (isVictory(chessBoard, [i, j], my)) {
+                    isOver = true
+                    snackbar("success", '你赢了', 3000)
+                } else {
+                    [i, j] = nextPlace(chessBoard, enemy)
+                    chessBoard.oneStep(i, j, enemy)
+                    if (isVictory(chessBoard, [i, j], enemy)) {
+                        isOver = true
+                        snackbar("error", '你输了', 3000)
+                    }
+                }
+            }
+        }
+    }
+
+    // 重新开始
+    resetBtn.onclick = function () {
+        isOver = false
+        isFirstStep = true
+        ;[my, enemy] = [null, null]
+        chessBoard.chess.onclick = null
+        selectDiv.style.display = 'block'
+        resetBtn.style.display = 'none'
+        chessBoard.init()
+        chessBoard.setBorder(0, 15, 0, 15)
+        chessBoard.reDraw()
+    }
+
+    const snackbarContainer = document.getElementById('snackbar-container');
+
+    function snackbar(type, msg, time) {
+        const para = document.createElement('P');
+        para.classList.add('snackbar');
+        para.innerHTML = `${msg} <span> &times </span>`;
+
+        if (type === 'error') {
+            para.classList.add('error');
+        } else if (type === 'success') {
+            para.classList.add('success');
+        } else if (type === 'warning') {
+            para.classList.add('warning');
+        } else if (type === 'info') {
+            para.classList.add('info');
+        }
+
+        snackbarContainer.appendChild(para);
+        para.classList.add('fadeout');
+
+        setTimeout(() => {
+            snackbarContainer.removeChild(para)
+        }, time)
+    }
+
+</script>
+</body>
+</html>
